@@ -12,6 +12,7 @@ typedef NSUInteger TBKTabBarStyle;
 enum {
 	TBKTabBarStyleDefault = 1,
 	TBKTabBarStyleArrowIndicator = 2,
+  TBKTabBarStyleTwiceHeight = 3,
 };
 
 @class TBKTabBarItem;

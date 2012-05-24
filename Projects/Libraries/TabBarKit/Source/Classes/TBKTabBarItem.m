@@ -1,14 +1,14 @@
-
-#import <TabBarKit/TBKTabBarItem.h>
-#import <TabBarKit/UIImage+TBKMasking.h>
+#import "TBKTabBarItem.h"
+#import "UIImage+TBKMasking.h"
+#import "SRDevice.h"
 
 @interface TBKTabBarItemSelectionLayer : CAShapeLayer
--(id) initWithItemFrame:(CGRect)itemFrame style:(TBKTabBarItemSelectionStyle)aStyle;
+-(id) initWithItemFrame:(CGRect)itemFrame style:(TBKTabBarItemStyle)aStyle;
 @end
 
 @implementation TBKTabBarItemSelectionLayer
 
--(id) initWithItemFrame:(CGRect)itemFrame style:(TBKTabBarItemSelectionStyle)aStyle {
+-(id) initWithItemFrame:(CGRect)itemFrame style:(TBKTabBarItemStyle)aStyle {
 	self = [super init];
 	if (!self) {
 		return nil;
@@ -16,10 +16,10 @@
 	self.needsDisplayOnBoundsChange = YES;
 	
 	CGRect insetFrame = CGRectZero;
-	if (aStyle == TBKTabBarItemIndicatorSelectionStyle) {
+	if (aStyle == TBKTabBarItemArrowIndicatorStyle) {
 		insetFrame = CGRectMake(0, 3, itemFrame.size.width, itemFrame.size.height - 3);
 	}
-	else if (aStyle == TBKTabBarItemDefaultSelectionStyle) {
+	else if (aStyle == TBKTabBarItemDefaultStyle || aStyle == TBKTabBarItemTwiceHeightStyle) {
 		insetFrame = CGRectMake(0, 2, itemFrame.size.width, itemFrame.size.height - 6);
 	}
 	
@@ -29,12 +29,12 @@
 	
 	UIBezierPath *roundedRectPath = nil;
 	
-	if (aStyle == TBKTabBarItemIndicatorSelectionStyle) {
+	if (aStyle == TBKTabBarItemArrowIndicatorStyle) {
 		roundedRectPath = [UIBezierPath bezierPathWithRoundedRect:insetFrame 
 												byRoundingCorners:(UIRectCornerTopLeft | UIRectCornerTopRight) 
 													  cornerRadii:CGSizeMake(5.0, 5.0)];
 	}
-	else if (aStyle == TBKTabBarItemDefaultSelectionStyle) {
+	else if (aStyle == TBKTabBarItemDefaultStyle || aStyle == TBKTabBarItemTwiceHeightStyle) {
 		roundedRectPath = [UIBezierPath bezierPathWithRoundedRect:insetFrame 
 												byRoundingCorners:(UIRectCornerAllCorners) 
 													  cornerRadii:CGSizeMake(5.0, 5.0)];	
@@ -110,7 +110,7 @@
 @property (nonatomic, retain) NSString *imageName;
 @property (nonatomic, retain) UIImage *tabImage;
 @property (nonatomic, retain) UIImage *selectedTabImage;
-@property (nonatomic, assign) TBKTabBarItemSelectionStyle selectionStyle;
+@property (nonatomic, assign) TBKTabBarItemStyle selectionStyle;
 
 @property (nonatomic, retain) NSString *controllerTitle;
 @property (nonatomic, retain) NSString *tabTitle;
@@ -138,7 +138,7 @@
 
 #pragma mark Initializers
 
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle {
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle {
 	self = [super init];
 	if (!self) {
 		return nil;
@@ -158,7 +158,7 @@
 	return self;
 }
 
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle tag:(NSInteger)aTag {
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle tag:(NSInteger)aTag {
 	self = [self initWithImageName:anImageName style:aStyle];
 	if (!self) {
 		return nil;
@@ -167,24 +167,32 @@
 	return self;
 }
 
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle tag:(NSInteger)aTag title:(NSString *)aTitle {
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle tag:(NSInteger)aTag title:(NSString *)aTitle {
 	self = [self initWithImageName:anImageName style: aStyle tag:aTag];
 	if (!self) {
 		return nil;
 	}
+    
 	self.controllerTitle = aTitle;
-	self.tabTitle = aTitle; // Should be from controller...
+	self.tabTitle = aTitle;
 	
-	if (self.controllerTitle && self.selectionStyle == TBKTabBarItemDefaultSelectionStyle) {
-		/*
+	if (self.controllerTitle && self.selectionStyle != TBKTabBarItemArrowIndicatorStyle) {
 		self.displayTitle = YES;
-		self.titleLabel.font = [UIFont boldSystemFontOfSize:10.0];
 		self.titleLabel.textAlignment = UITextAlignmentCenter;
-		self.titleLabel.contentMode = UIViewContentModeLeft;
-		self.imageEdgeInsets = UIEdgeInsetsMake(0, 22, 11, 0);
-		self.titleEdgeInsets = UIEdgeInsetsMake(0, -35, 2, 0);
-		[self setTitle:self.controllerTitle forState:(UIControlStateNormal | UIControlStateSelected)];
-		*/
+    self.titleLabel.contentMode = UIViewContentModeLeft;
+       
+    if (self.selectionStyle == TBKTabBarItemDefaultStyle) {
+      self.titleLabel.font = [UIFont boldSystemFontOfSize:10.0];
+      self.imageEdgeInsets = UIEdgeInsetsMake(0, 14, 10, 14);
+      self.titleEdgeInsets = UIEdgeInsetsMake(30, -30, 0, 0);
+    }
+    else if (self.selectionStyle == TBKTabBarItemTwiceHeightStyle) {
+      self.titleLabel.font = [UIFont boldSystemFontOfSize:20.0];
+      self.imageEdgeInsets = UIEdgeInsetsMake(0, 44, 22, 0);
+      self.titleEdgeInsets = UIEdgeInsetsMake(60, -64, 0, 0);
+    }
+    
+		[self setTitle:self.controllerTitle forState:UIControlStateNormal];
 	}
 	return self;
 }
@@ -199,13 +207,15 @@
 	selectionLayer = [[TBKTabBarItemSelectionLayer alloc] initWithItemFrame:self.bounds style:self.selectionStyle];
 	if (flag) {
 		if (![self.layer.sublayers containsObject:self.selectionLayer]) {
-			[self.layer addSublayer:self.selectionLayer];
+			//[self.layer addSublayer:self.selectionLayer];
+      [self.layer insertSublayer:self.selectionLayer atIndex:0];
 		}
 	}
 	else {
 		if ([self.layer.sublayers containsObject:self.selectionLayer]) {
 			[self.selectionLayer removeFromSuperlayer];
 		}
+    self.titleLabel.textColor = [UIColor grayColor];
 	}
 	[self setNeedsDisplay];
 }

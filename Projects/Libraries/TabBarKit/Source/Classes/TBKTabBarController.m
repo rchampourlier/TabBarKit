@@ -1,11 +1,13 @@
 
-#import <TabBarKit/TBKTabBarController.h>
-#import <TabBarKit/TBKTabBar.h>
-#import <TabBarKit/TBKTabBarItem.h>
-#import <TabBarKit/NSObject+TBKAssociatedObject.h>
+#import "TBKTabBarController.h"
+#import "TBKTabBar.h"
+#import "TBKTabBarItem.h"
+#import "NSObject+TBKAssociatedObject.h"
 #import <QuartzCore/QuartzCore.h>
 
+
 static CGFloat const TBKTabBarDefaultStyleHeight = 49.0;
+static CGFloat const TBKTabBarTwiceHeightStyleHeight = 98.0;
 static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 
 @interface TBKMoreListController : UITableViewController
@@ -16,12 +18,12 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 
 #pragma mark -
 
-@interface TBKTabBarController () <UINavigationControllerDelegate>
+@interface TBKTabBarController () <UINavigationControllerDelegate> {
+  UIView *_containerView;
+}
 @property (nonatomic, retain, readwrite) UINavigationController *moreNavigationController;
-@property (nonatomic, retain) UIView *containerView;
 @property (nonatomic, assign) TBKTabBarStyle tabBarStyle;
 @property (nonatomic, assign) CGFloat tabBarHeight;
-@property (nonatomic, assign) BOOL displaysTabBarItemTitles;
 -(void) loadViewControllers;
 @end
 
@@ -33,54 +35,75 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 @synthesize tabBar;
 @synthesize tabBarStyle;
 @synthesize tabBarHeight;
-@synthesize containerView;
 @synthesize viewControllers;
-@synthesize selectedViewController;
+@synthesize selectedViewController = _selectedViewController;
 @synthesize moreNavigationController;
 @synthesize customizableViewControllers;
-@synthesize selectedIndex;
+@synthesize selectedIndex = _selectedIndex;
 @synthesize displaysTabBarItemTitles;
+
 
 #pragma mark - Initializer
 
--(id) initWithStyle:(TBKTabBarStyle)aStyle {
-	self = [super initWithNibName:nil bundle:nil];
-	if (!self) {
-		return nil;
+- (id)initWithStyle:(TBKTabBarStyle)aStyle {
+  self = [super init];
+	if (self) {
+		_selectedIndex = NSUIntegerMax;
+    
+    self.tabBarStyle = aStyle;
+    if (self.tabBarStyle == TBKTabBarStyleArrowIndicator) {
+      self.tabBarHeight = TBKTabBarArrowIndicatorHeight;
+    }
+    else if (self.tabBarStyle == TBKTabBarStyleDefault) {
+      self.tabBarHeight = TBKTabBarDefaultStyleHeight;
+    }
+    else if (self.tabBarStyle == TBKTabBarStyleTwiceHeight) {
+      self.tabBarHeight = TBKTabBarTwiceHeightStyleHeight;
+    }
 	}
-	self.tabBarStyle = aStyle;
-	if (self.tabBarStyle == TBKTabBarStyleArrowIndicator) {
-		self.tabBarHeight = TBKTabBarArrowIndicatorHeight;
-	}
-	else if (self.tabBarStyle == TBKTabBarStyleDefault) {
-		self.tabBarHeight = TBKTabBarDefaultStyleHeight;
-	}
-	return self;
+  return self;
 }
 
 
 #pragma mark - UIViewController
 
--(void) loadView {
+- (void)loadView {
 	[super loadView];
-}
+  
+  BOOL isIPad = NO;
+#ifdef UI_USER_INTERFACE_IDIOM
+  isIPad = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
+#else
+  isIPad = NO;
+#endif
+  
+  CGRect screenFrame = isIPad ? CGRectMake(0, 0, 768, 1024) : CGRectMake(0, 0, 320, 480);
 
--(void) viewDidLoad {
-	[super viewDidLoad];
-	self.view.backgroundColor = [UIColor clearColor];
-		
-	self.containerView = [[[UIView alloc] initWithFrame:self.view.frame] autorelease];
-	self.view = self.containerView;
-	
-	self.tabBar = [[[TBKTabBar alloc] initWithFrame:CGRectMake(0, CGRectGetHeight(self.view.bounds) - self.tabBarHeight, CGRectGetWidth(self.view.bounds), self.tabBarHeight) 
-											  style:self.tabBarStyle] autorelease];
+	UIView *aView = [[[UIView alloc] initWithFrame:screenFrame] autorelease];
+  aView.backgroundColor = [UIColor clearColor];
+  
+  CGRect containerViewFrame = CGRectMake(0, 0, aView.bounds.size.width, aView.bounds.size.height - self.tabBarHeight);
+  _containerView = [[[UIView alloc] initWithFrame:containerViewFrame] autorelease];
+  [aView addSubview:_containerView];
+  
+  CGRect tabBarFrame = CGRectMake(0,
+                                  CGRectGetHeight(aView.bounds) - self.tabBarHeight,
+                                  CGRectGetWidth(aView.bounds),
+                                  self.tabBarHeight);
+	self.tabBar = [[[TBKTabBar alloc] initWithFrame:tabBarFrame 
+                                            style:self.tabBarStyle] autorelease];
 	self.tabBar.delegate = self;
-	
-	[self.containerView addSubview:self.tabBar];
-	[self loadViewControllers];
+	[aView addSubview:self.tabBar];
+  
+	self.view = aView;
 }
 
--(void) viewWillAppear:(BOOL)animated {
+- (void)viewDidLoad {
+	[super viewDidLoad];
+  [self loadViewControllers];
+}
+
+- (void)viewWillAppear:(BOOL)animated {
 	[super viewWillAppear:animated];
 	[self addObserver:self forKeyPath:@"viewControllers" options:(NSKeyValueObservingOptionNew) context:nil];
 }
@@ -89,9 +112,9 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 #pragma mark - KVO
 
 -(void) observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-	#ifdef __KVODEBUG__
+#ifdef __KVODEBUG__
 	NSLog(@"Key Value Observing <%p %@> keyPath: %@ object: <%p %@>", self, NSStringFromClass([self class]), keyPath, object, NSStringFromClass([object class]));
-	#endif
+#endif
 	if (object == self) {
 		if ([keyPath isEqualToString:@"viewControllers"]) {
 			id newValue = [change objectForKey:NSKeyValueChangeNewKey];
@@ -103,20 +126,34 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 }
 
 
-#pragma mark - View Controler Loading
+#pragma mark - View controller loading
 
--(void) setViewControllers:(NSArray *)controllers animated:(BOOL)animated {
+- (void)setViewControllers:(NSArray *)controllers animated:(BOOL)animated {
 	self.viewControllers = controllers;
 }
 
--(void) loadViewControllers {
+- (void)loadViewControllers {
 	NSMutableArray *controllerTabs = [NSMutableArray arrayWithCapacity:[self.viewControllers count]];
 	NSUInteger tagIndex = 0;
 	for (UIViewController *controller in self.viewControllers) {
 		if ([controller isKindOfClass:[UINavigationController class]]) {
 			((UINavigationController *)controller).delegate = self;
 		}
-		TBKTabBarItem *tabItem = [[[TBKTabBarItem alloc] initWithImageName:controller.tabImageName style:self.tabBarStyle tag:tagIndex title:controller.title] autorelease];
+    
+    TBKTabBarItemStyle tabItemStyle;
+    switch (self.tabBarStyle) {
+      case TBKTabBarStyleArrowIndicator:
+        tabItemStyle = TBKTabBarItemArrowIndicatorStyle;
+        break;
+      case TBKTabBarStyleTwiceHeight:
+        tabItemStyle = TBKTabBarItemTwiceHeightStyle;
+        break;
+      case TBKTabBarStyleDefault:
+      default:
+        tabItemStyle = TBKTabBarItemDefaultStyle;
+    }
+    
+		TBKTabBarItem *tabItem = [[[TBKTabBarItem alloc] initWithImageName:controller.tabImageName style:tabItemStyle tag:tagIndex title:controller.tabTitle] autorelease];
 		[controllerTabs addObject:tabItem];
 		[controller setTabItem:tabItem];
 		[controller setTabController:self];
@@ -125,14 +162,54 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 	self.tabBar.items = controllerTabs;
 }
 
--(void) unloadViewControllers {
+- (void)unloadViewControllers {
+  
+}
 
+
+
+#pragma mark - Selected tab
+
+- (void)setSelectedIndex:(NSUInteger)selectedIndex {
+  if (_selectedIndex != selectedIndex) {
+    UIViewController *vc = [self.viewControllers objectAtIndex:selectedIndex];
+    self.selectedViewController = vc;
+  }
+}
+
+- (void)setSelectedViewController:(UIViewController *)aViewController {    
+  // Remove currently selected view controller's view
+  if (_selectedViewController) {
+    [_selectedViewController viewWillDisappear:NO];
+    [_selectedViewController.view removeFromSuperview];
+    [_selectedViewController viewDidDisappear:NO];
+  }
+  
+  _selectedViewController = aViewController;
+  [_selectedViewController viewWillAppear:NO];
+  
+  _selectedViewController.view.autoresizingMask = (UIViewAutoresizingFlexibleWidth | 
+                                                   UIViewAutoresizingFlexibleHeight | 
+                                                   UIViewAutoresizingFlexibleBottomMargin);
+  
+  // Calculating remaining size for contained view
+  CGFloat containedViewHeight = CGRectGetHeight(self.view.bounds) - CGRectGetHeight(self.tabBar.bounds);
+  _selectedViewController.view.frame = CGRectMake(CGRectGetMinX(self.view.bounds), 
+                                                  CGRectGetMinY(self.view.bounds), 
+                                                  CGRectGetWidth(self.view.bounds), 
+                                                  containedViewHeight);
+  [_containerView addSubview:_selectedViewController.view];
+  [_selectedViewController.view setNeedsLayout];
+  [_selectedViewController viewDidAppear:NO];
+  
+  _selectedIndex = [self.viewControllers indexOfObject:aViewController];
+  self.tabBar.selectedTabBarItem = [self.tabBar.items objectAtIndex:_selectedIndex];
 }
 
 
 #pragma mark - <TBKTabBarDelegate>
 
--(void) tabBar:(TBKTabBar *)aTabBar didSelectTabAtIndex:(NSUInteger)anIndex {
+- (void)tabBar:(TBKTabBar *)aTabBar didSelectTabAtIndex:(NSUInteger)anIndex {
 	UIViewController *vc = [self.viewControllers objectAtIndex:anIndex];
 	if (self.selectedViewController == vc) {
 		if ([self.selectedViewController isKindOfClass:[UINavigationController class]]) {
@@ -141,94 +218,76 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 	}
 	else {
 		self.selectedViewController = vc;
-		[self.selectedViewController viewWillAppear:NO];
-		
-		[self.containerView removeFromSuperview];
-		self.containerView = self.selectedViewController.view;
-		self.selectedViewController.view.autoresizingMask = (UIViewAutoresizingFlexibleWidth | 
-															 UIViewAutoresizingFlexibleHeight | 
-															 UIViewAutoresizingFlexibleBottomMargin);
-		CGFloat containerViewHeight = CGRectGetHeight(self.view.bounds);
-		containerViewHeight -= CGRectGetHeight(self.tabBar.bounds);
-		self.selectedViewController.view.frame = CGRectMake(CGRectGetMinX(self.view.bounds), 
-												 CGRectGetMinY(self.view.bounds), 
-												 CGRectGetWidth(self.view.bounds), 
-												 containerViewHeight);
-		[self.view addSubview:self.containerView];
-		[self.view sendSubviewToBack:self.containerView];
-		[self.containerView setNeedsLayout];
-		[self.selectedViewController viewDidAppear:NO];
-		self.selectedIndex = anIndex;
-	}
+  }
 	
 	if (self.delegate && [self.delegate respondsToSelector:@selector(tabBarController:didSelectViewController:)]) {
 		[self.delegate tabBarController:self 
-				didSelectViewController:self.selectedViewController];
+            didSelectViewController:self.selectedViewController];
 	}
 }
 
 
 #pragma mark - <UINavigationControllerDelegate>
 
--(void) navigationController:(UINavigationController *)nvc willShowViewController:(UIViewController *)vc animated:(BOOL)animated {
+- (void)navigationController:(UINavigationController *)nvc willShowViewController:(UIViewController *)vc animated:(BOOL)animated {
 	[vc setTabItem:nvc.tabItem];
 	[vc setTabController:nvc.tabController];
 	if (vc.hidesBottomBarWhenPushed == YES && self.tabBar.hidden == NO) {
-		self.containerView.frame = self.view.bounds;
+		_containerView.frame = self.view.bounds;
 		// One *might* be inclined to think UINavigationControllerHideShowBarDuration would work best here. Sadly not so.
 		[UIView animateWithDuration:0.275 
-							  delay:0 
-							options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionCurveEaseIn)
-						 animations:^{
-							 CGRect tabBarBounds = self.tabBar.frame;
-							 tabBarBounds.origin.x -= CGRectGetMaxX(self.containerView.frame);
-							 self.tabBar.frame = tabBarBounds;
-						 } 
-						 completion:^(BOOL finished){
-							self.tabBar.hidden = YES;
-						 }];
+                          delay:0 
+                        options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionCurveEaseIn)
+                     animations:^{
+                       CGRect tabBarBounds = self.tabBar.frame;
+                       tabBarBounds.origin.x -= CGRectGetMaxX(_containerView.frame);
+                       self.tabBar.frame = tabBarBounds;
+                     } 
+                     completion:^(BOOL finished){
+                       self.tabBar.hidden = YES;
+                     }];
 		return;
 	}
 	else if (vc.hidesBottomBarWhenPushed == NO && self.tabBar.hidden == YES) {
 		self.tabBar.hidden = NO;
 		[UIView animateWithDuration:0.275 
-							  delay:0 
-							options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionCurveEaseIn)
-						 animations:^{
-						     CGRect tabBarBounds = self.tabBar.frame;
-							 tabBarBounds.origin.x = CGRectGetMinX(self.view.bounds);
-							 self.tabBar.frame = tabBarBounds;
-						 } 
-						 completion:^(BOOL finished){
-							 [UIView animateWithDuration:0.1 delay:0 
-												 options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionBeginFromCurrentState)
-											  animations:^{
-												  self.containerView.frame = CGRectMake(CGRectGetMinX(self.view.bounds), 
-																						CGRectGetMinY(self.view.bounds), 
-																						CGRectGetWidth(self.view.bounds), 
-																						(CGRectGetHeight(self.view.bounds) - CGRectGetHeight(self.tabBar.bounds)));
-											  }
-											  completion:^(BOOL finished){
-											  }];
-						 }];
+                          delay:0 
+                        options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionCurveEaseIn)
+                     animations:^{
+                       CGRect tabBarBounds = self.tabBar.frame;
+                       tabBarBounds.origin.x = CGRectGetMinX(self.view.bounds);
+                       self.tabBar.frame = tabBarBounds;
+                     } 
+                     completion:^(BOOL finished){
+                       [UIView animateWithDuration:0.1 delay:0 
+                                           options:(UIViewAnimationOptionLayoutSubviews | UIViewAnimationOptionBeginFromCurrentState)
+                                        animations:^{
+                                          _containerView.frame = CGRectMake(CGRectGetMinX(self.view.bounds), 
+                                                                            CGRectGetMinY(self.view.bounds), 
+                                                                            CGRectGetWidth(self.view.bounds), 
+                                                                            (CGRectGetHeight(self.view.bounds) - CGRectGetHeight(self.tabBar.bounds)));
+                                        }
+                                        completion:^(BOOL finished){
+                                        }];
+                     }];
 		return;
 	}
 }
 
 -(void) navigationController:(UINavigationController *)nvc didShowViewController:(UIViewController *)vc animated:(BOOL)animated {
-
+  
 }
 
 
 #pragma mark - UIInterfaceOrientation
 
 -(BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)anOrientation {
-    BOOL shouldRotate = YES;
-    if (selectedViewController && [selectedViewController respondsToSelector:@selector(shouldAutorotateToInterfaceOrientation:)])
-    {
-        shouldRotate = [self.selectedViewController shouldAutorotateToInterfaceOrientation:anOrientation];
-    }
-    return shouldRotate;
+  BOOL shouldRotate = YES;
+  if (_selectedViewController && [_selectedViewController respondsToSelector:@selector(shouldAutorotateToInterfaceOrientation:)])
+  {
+    shouldRotate = [self.selectedViewController shouldAutorotateToInterfaceOrientation:anOrientation];
+  }
+  return shouldRotate;
 }
 
 -(void) willRotateToInterfaceOrientation:(UIInterfaceOrientation)anOrientation duration:(NSTimeInterval)aDuration {
@@ -279,25 +338,23 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 
 #pragma mark - Memory
 
--(void) didReceiveMemoryWarning {
+- (void)didReceiveMemoryWarning {
 	[super didReceiveMemoryWarning];
 }
 
--(void) viewDidUnload {
+- (void)viewDidUnload {
 	tabBar.delegate = nil;
 	[tabBar release]; tabBar = nil;
-    [containerView release]; containerView = nil;
 	[super viewDidUnload];
 }
 
--(void) dealloc {
+- (void)dealloc {
 	self.delegate = nil;
 	self.moreNavigationController = nil;
 	self.customizableViewControllers = nil;
 	self.selectedViewController = nil;
 	self.viewControllers = nil;
 	self.tabBar = nil;
-	self.containerView = nil;
 	[super dealloc];
 }
 
@@ -450,7 +507,7 @@ static NSString * const TBKTabControllerKey = @"TBKTabControllerKey";
 #pragma mark <UITableViewDelegate>
 
 -(void) tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-
+  
 }
 
 
@@ -485,14 +542,14 @@ static NSString * const TBKTabControllerKey = @"TBKTabControllerKey";
 #pragma mark -
 
 /*
-@interface TBKMoreNavigationController : UINavigationController
-
-@property (nonatomic, retain) TBKMoreListController *moreListController;
-@property (nonatomic, retain) UINavigationController *originalNavigationController;
-@property (nonatomic, retain) UIViewController *originalRootViewController;
-
-@property (nonatomic, assign) UIViewController *displayedViewController;
-@property (nonatomic, retain) NSArray *moreViewControllers;
-@property (nonatomic, assign) BOOL allowsCustomizing;
-@end
-*/
+ @interface TBKMoreNavigationController : UINavigationController
+ 
+ @property (nonatomic, retain) TBKMoreListController *moreListController;
+ @property (nonatomic, retain) UINavigationController *originalNavigationController;
+ @property (nonatomic, retain) UIViewController *originalRootViewController;
+ 
+ @property (nonatomic, assign) UIViewController *displayedViewController;
+ @property (nonatomic, retain) NSArray *moreViewControllers;
+ @property (nonatomic, assign) BOOL allowsCustomizing;
+ @end
+ */

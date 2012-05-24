@@ -6,8 +6,8 @@
 */
 
 #import <UIKit/UIKit.h>
-#import <TabBarKit/TBKTabBar.h>
-#import <TabBarKit/TBKTabBarItem.h>
+#import "TBKTabBar.h"
+#import "TBKTabBarItem.h"
 
 @class TBKTabBarView;
 @protocol  TBKTabBarControllerDelegate;
@@ -17,7 +17,10 @@
 @superclass UIViewController <TBKTabBarDelegate>
 @abstract
 */
-@interface TBKTabBarController : UIViewController <TBKTabBarDelegate>
+@interface TBKTabBarController : UIViewController <TBKTabBarDelegate> {
+  NSUInteger        _selectedIndex;
+  UIViewController  *_selectedViewController;
+}
 
 @property (nonatomic, assign) id <TBKTabBarControllerDelegate> delegate;
 
@@ -29,6 +32,8 @@
 
 @property (nonatomic, retain, readonly) UINavigationController *moreNavigationController;
 @property (nonatomic, copy) NSArray *customizableViewControllers;
+
+@property (nonatomic, assign) BOOL displaysTabBarItemTitles;
 
 #pragma mark Designated Initializer
 

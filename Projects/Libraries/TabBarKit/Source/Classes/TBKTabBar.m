@@ -1,6 +1,6 @@
 
-#import <TabBarKit/TBKTabBar.h>
-#import <TabBarKit/TBKTabBarItem.h>
+#import "TBKTabBar.h"
+#import "TBKTabBarItem.h"
 
 @interface TBKArrowLayer : CAShapeLayer
 @end
@@ -53,14 +53,8 @@
 @synthesize arrowLayer;
 @synthesize tabMargin;
 
-#pragma mark CALayer
 
-+(Class) layerClass {
-	return [CAGradientLayer class];
-}
-
-
-#pragma mark Initializer
+#pragma mark - Life cycle
 
 -(id) initWithFrame:(CGRect)aFrame style:(TBKTabBarStyle)aStyle {
 	self = [super initWithFrame:aFrame];
@@ -106,10 +100,18 @@
 	return self;
 }
 
+-(void) dealloc {
+	self.arrowLayer = nil;
+	self.delegate = nil;
+	self.selectedTabBarItem = nil;
+	self.items = nil;
+	[super dealloc];
+}
 
-#pragma mark -
 
--(void) setItems:(NSArray *)aTabBarItemArray {
+#pragma mark - Manage items
+
+- (void)setItems:(NSArray *)aTabBarItemArray {
 	for (TBKTabBarItem *tabBarItem in items) {
 		[tabBarItem removeFromSuperview];
 	}
@@ -131,22 +133,12 @@
 	[self setNeedsLayout];
 }
 
--(void) didSelectTabBarItem:(TBKTabBarItem *)sender {
-	for (TBKTabBarItem *tab in items) {
-		if (tab == sender) {
-			continue;
-		}
-		tab.selected = NO;
-	}
-	sender.selected = YES;
+- (void)didSelectTabBarItem:(TBKTabBarItem *)sender {
 	self.selectedTabBarItem = sender;
 	[self.delegate tabBar:self didSelectTabAtIndex:[self.items indexOfObject:sender]];
-	if (self.tabBarStyle == TBKTabBarStyleArrowIndicator) {
-		[self setArrowPositionAnimated:YES];
-	}
 }
 
--(void) setArrowPositionAnimated:(BOOL)animated {
+- (void)setArrowPositionAnimated:(BOOL)animated {
 	if (animated) {
 		[UIView beginAnimations:nil context:NULL];
 		[UIView setAnimationDuration:0.2];
@@ -159,8 +151,23 @@
 	}
 }
 
+- (void)setSelectedTabBarItem:(TBKTabBarItem *)anItem {
+  for (TBKTabBarItem *tab in items) {
+		if (tab == anItem) {
+			continue;
+		}
+		tab.selected = NO;
+	}
+	anItem.selected = YES;
+	selectedTabBarItem = anItem;
+  
+  if (self.tabBarStyle == TBKTabBarStyleArrowIndicator) {
+		[self setArrowPositionAnimated:YES];
+	}
+}
 
-#pragma mark UIView
+
+#pragma mark - UIView
 
 -(void) layoutSubviews {
 	[super layoutSubviews];
@@ -172,6 +179,7 @@
 		tab.frame = currentBounds;
 		currentBounds.origin.x += currentBounds.size.width;
 		[self addSubview:tab];
+    tab.titleLabel.textColor = [UIColor grayColor];
 	}
 	if (self.tabBarStyle == TBKTabBarStyleArrowIndicator) {
 		[self setArrowPositionAnimated:NO];
@@ -185,7 +193,14 @@
 }
 
 
-#pragma mark -
+#pragma mark - CALayer
+
++(Class) layerClass {
+	return [CAGradientLayer class];
+}
+
+
+#pragma mark - Not implemented
 
 -(void) setItems:(NSArray *)tabItems animated:(BOOL)animated {
 
@@ -201,17 +216,6 @@
 
 -(BOOL) isCustomizing {
 	return NO;
-}
-
-
-#pragma mark Memory
-
--(void) dealloc {
-	self.arrowLayer = nil;
-	self.delegate = nil;
-	self.selectedTabBarItem = nil;
-	self.items = nil;
-	[super dealloc];
 }
 
 @end

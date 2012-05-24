@@ -8,10 +8,11 @@
 #import <QuartzCore/QuartzCore.h>
 #import <UIKit/UIKit.h>
 
-typedef NSUInteger TBKTabBarItemSelectionStyle;
+typedef NSUInteger TBKTabBarItemStyle;
 enum {
-	TBKTabBarItemDefaultSelectionStyle = 1,
-	TBKTabBarItemIndicatorSelectionStyle = 2
+	TBKTabBarItemDefaultStyle = 1,
+	TBKTabBarItemArrowIndicatorStyle = 2,
+  TBKTabBarItemTwiceHeightStyle = 3
 };
 
 /*!
@@ -25,9 +26,9 @@ enum {
 
 #pragma mark Initializers
 
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle;
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle tag:(NSInteger)aTag;
--(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemSelectionStyle)aStyle tag:(NSInteger)aTag title:(NSString *)aTitle;
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle;
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle tag:(NSInteger)aTag;
+-(id) initWithImageName:(NSString *)anImageName style:(TBKTabBarItemStyle)aStyle tag:(NSInteger)aTag title:(NSString *)aTitle;
 
 @end
 
