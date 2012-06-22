@@ -1,3 +1,8 @@
+/**
+ TODO
+   - it may be better to be a subclass of UINavigationViewController for a better management of
+     the tabs view controllers.
+ */
 
 #import "TBKTabBarController.h"
 #import "TBKTabBar.h"
@@ -15,6 +20,8 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
 @property (nonatomic, assign) UIBarButtonItem *moreEditButtonItem;
 @property (nonatomic, assign) BOOL allowsCustomizing;
 @end
+
+BOOL isOS5OrLater();
 
 #pragma mark -
 
@@ -94,13 +101,13 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
                                             style:self.tabBarStyle] autorelease];
 	self.tabBar.delegate = self;
 	[aView addSubview:self.tabBar];
+  [self loadViewControllers];
   
 	self.view = aView;
 }
 
 - (void)viewDidLoad {
 	[super viewDidLoad];
-  [self loadViewControllers];
 }
 
 - (void)viewWillAppear:(BOOL)animated {
@@ -177,21 +184,40 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
   }
 }
 
+/**
+ We need to force the viewWill/Did Appear/Disappear when on OS < 5 because they do not get
+ called when the view controllers structure is not following the standard way.
+ 
+ It's related to the way UIViewControllers should normally be used. This controller class
+ should be a subclass of UINavigationViewController but it can't since it needs it's own
+ view to manage the displayed view controller's view and the tab bar view.
+ 
+ A UIViewController instance is not expected a view for a part of the screen, which is the
+ case for all the tabs' view controllers: they're only managing the part of the screen above
+ the tab bar.
+ 
+ Related references:
+  - http://stackoverflow.com/questions/5691226/am-i-abusing-uiviewcontroller-subclassing/5691708#comment-6507338
+  - http://blog.carbonfive.com/2011/03/09/abusing-uiviewcontrollers/
+ */
 - (void)setSelectedViewController:(UIViewController *)aViewController {    
   // Remove currently selected view controller's view
   if (_selectedViewController) {
-    [_selectedViewController viewWillDisappear:NO];
+    if (!isOS5OrLater()) [_selectedViewController viewWillDisappear:NO];
     [_selectedViewController.view removeFromSuperview];
-    [_selectedViewController viewDidDisappear:NO];
+    if (!isOS5OrLater()) [_selectedViewController viewDidDisappear:NO];
   }
   
   _selectedViewController = aViewController;
-  [_selectedViewController viewWillAppear:NO];
   
   _selectedViewController.view.autoresizingMask = (UIViewAutoresizingFlexibleWidth | 
                                                    UIViewAutoresizingFlexibleHeight | 
                                                    UIViewAutoresizingFlexibleBottomMargin);
-  
+
+  if (!isOS5OrLater()) [_selectedViewController viewWillAppear:NO];
+  // This must be after the first reference to _selectedViewController.view
+  // because we generally want the view to be loaded within viewWillAppear
+
   // Calculating remaining size for contained view
   CGFloat containedViewHeight = CGRectGetHeight(self.view.bounds) - CGRectGetHeight(self.tabBar.bounds);
   _selectedViewController.view.frame = CGRectMake(CGRectGetMinX(self.view.bounds), 
@@ -200,7 +226,7 @@ static CGFloat const TBKTabBarArrowIndicatorHeight = 44.0;
                                                   containedViewHeight);
   [_containerView addSubview:_selectedViewController.view];
   [_selectedViewController.view setNeedsLayout];
-  [_selectedViewController viewDidAppear:NO];
+  if (!isOS5OrLater()) [_selectedViewController viewDidAppear:NO];
   
   _selectedIndex = [self.viewControllers indexOfObject:aViewController];
   self.tabBar.selectedTabBarItem = [self.tabBar.items objectAtIndex:_selectedIndex];
@@ -553,3 +579,8 @@ static NSString * const TBKTabControllerKey = @"TBKTabControllerKey";
  @property (nonatomic, assign) BOOL allowsCustomizing;
  @end
  */
+
+BOOL isOS5OrLater() {
+  float version = [[[UIDevice currentDevice] systemVersion] floatValue];
+  return version >= 5;
+}
